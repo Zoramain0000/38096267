@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>🧠 GPT-4o Mini Text Chat with PDF Export + Controls</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      color: #222;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: background 0.3s, color 0.3s;
+    }
+    header {
+      background: #2c3e50;
+      color: white;
+      padding: 1rem;
+      font-weight: bold;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    #ethicalNotice {
+      font-size: 0.85rem;
+      color: #f39c12;
+      font-weight: normal;
+      max-width: 400px;
+      margin: 0 auto;
+      text-align: center;
+      flex: 1 1 100%;
+    }
+    #tabs {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 0.5rem;
+      width: 100%;
+      overflow-x: auto;
+    }
+    .tab {
+      background: #34495e;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 6px 6px 0 0;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      position: relative;
+    }
+    .tab.active {
+      background: #27ae60;
+      font-weight: bold;
+    }
+    .tab .close-btn {
+      background: transparent;
+      border: none;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      font-size: 1rem;
+      line-height: 1;
+      padding: 0 4px;
+      user-select: none;
+      position: absolute;
+      top: 2px;
+      right: 4px;
+      border-radius: 50%;
+      transition: background 0.2s;
+    }
+    .tab .close-btn:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    #chat {
+      flex: 1;
+      padding: 10px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      scroll-behavior: smooth;
+      background: white;
+      border-top: 1px solid #ccc;
+      border-bottom: 1px solid #ccc;
+      position: relative;
+    }
+    .message {
+      max-width: 80%;
+      padding: 10px;
+      border-radius: 8px;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      font-size: 1rem;
+      line-height: 1.4;
+      box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+      user-select: text;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      position: relative;
+      animation: fadeIn 0.3s ease forwards;
+    }
+    @keyframes fadeIn {
+      from {opacity: 0; transform: translateY(5px);}
+      to {opacity: 1; transform: translateY(0);}
+    }
+    .user {
+      background: #3498db;
+      color: white;
+      margin-left: auto;
+      border-bottom-right-radius: 0;
+    }
+    .bot {
+      background: #ecf0f1;
+      color: #222;
+      margin-right: auto;
+      border-bottom-left-radius: 0;
+      white-space: pre-wrap;
+    }
+    #inputArea {
+      display: flex;
+      padding: 10px;
+      background: white;
+      gap: 5px;
+      flex-wrap: wrap;
+      border-top: 1px solid #ccc;
+      align-items: center;
+    }
+    #inputArea input[type="text"] {
+      flex: 1 1 200px;
+      padding: 10px;
+      font-size: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: white;
+      color: #222;
+      transition: border-color 0.3s;
+    }
+    #inputArea input[type="text"]:focus {
+      outline: none;
+      border-color: #27ae60;
+    }
+    #inputArea button {
+      padding: 10px 15px;
+      font-size: 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      background: #27ae60;
+      color: white;
+      transition: background 0.3s;
+      flex-shrink: 0;
+    }
+    #inputArea button:hover:not(:disabled) {
+      background: #219150;
+    }
+    #clearChatBtn {
+      background: #e74c3c;
+      margin-left: auto;
+    }
+    #clearChatBtn:hover {
+      background: #c0392b;
+    }
+    #downloadPdfBtn {
+      background: #2980b9;
+      margin-left: 10px;
+    }
+    #downloadPdfBtn:hover {
+      background: #1c5980;
+    }
+    pre {
+      background: #00000020;
+      padding: 6px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      user-select: text;
+    }
+    code {
+      font-family: monospace;
+      background: #ddd;
+      padding: 2px 4px;
+      border-radius: 4px;
+    }
+    .copy-btn {
+      background: #3498db;
+      border: none;
+      color: white;
+      padding: 2px 6px;
+      font-size: 0.8rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-left: 8px;
+      user-select: none;
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      opacity: 0.8;
+      transition: opacity 0.3s;
+    }
+    .copy-btn:hover {
+      background: #2980b9;
+      opacity: 1;
+    }
+    #controlButtons {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      background: #fff;
+      border-top: 1px solid #ccc;
+      justify-content: center;
+    }
+    #controlButtons button {
+      background: #27ae60;
+      border: none;
+      color: white;
+      padding: 8px 16px;
+      font-size: 1rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+    #controlButtons button:hover {
+      background: #219150;
+    }
+    #controlButtons button:disabled {
+      background: #95a5a6;
+      cursor: not-allowed;
+    }
+    #stopBtn {
+      background: #e74c3c;
+    }
+    #stopBtn:hover {
+      background: #c0392b;
+    }
+    @media (max-width: 600px) {
+      .message {
+        max-width: 95%;
+        font-size: 0.9rem;
+      }
+      #inputArea input[type="text"] {
+        flex-basis: 100%;
+      }
+      #inputArea button {
+        flex-basis: auto;
+      }
+      #conversationControls {
+        justify-content: center;
+      }
+      #controlButtons {
+        flex-wrap: wrap;
+      }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div>🧠Zero days GPT </div>
+  <div id="ethicalNotice" title="Ethical Use Notice">
+    ⚠️ For authorized, ethical, and educational use only. Do not use for unauthorized or malicious purposes.
+  </div>
+  <div id="conversationControls" style="flex-direction: column; width: 100%;">
+    <div id="tabs" role="tablist" aria-label="Chat conversations"></div>
+    <div style="margin-top: 0.5rem; display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+      <button id="newConversationBtn" title="New Conversation" aria-label="Create new chat tab">+ New Chat</button>
+      <button id="clearChatBtn" title="Clear Current Chat" aria-label="Clear current chat messages">Clear Chat</button>
+      <button id="downloadPdfBtn" title="Download Chat as PDF" aria-label="Download chat conversation as PDF">Download PDF</button>
+    </div>
+  </div>
+</header>
+<div id="chat" aria-live="polite" aria-label="Chat messages"></div>
+<div id="controlButtons" aria-label="Generation controls" style="display:none;">
+  <button id="stopBtn" aria-label="Stop generation">Stop</button>
+  <button id="continueBtn" aria-label="Continue generation" style="display:none;">Continue</button>
+</div>
+<div id="inputArea">
+  <input id="userInput" type="text" placeholder="Type your question or command..." aria-label="User input" autocomplete="off" />
+  <button id="sendBtn" aria-label="Send message">Send</button>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+  // Replace with your own OpenAI API key
+  const OPENAI_API_KEY = "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";
+
+  const chat = document.getElementById("chat");
+  const input = document.getElementById("userInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const tabsContainer = document.getElementById("tabs");
+  const newConversationBtn = document.getElementById("newConversationBtn");
+  const clearChatBtn = document.getElementById("clearChatBtn");
+  const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+  const controlButtons = document.getElementById("controlButtons");
+  const stopBtn = document.getElementById("stopBtn");
+  const continueBtn = document.getElementById("continueBtn");
+
+  // Local predefined responses for special commands
+  const localResponses = {
+    "help": `Zerodays GPT can do full feature but be specific of Request/question/command:
+- Summarize a document
+- Write me an email
+- Translate code
+- Content moderation
+- Recommend a product
+- Write essay
+- Write papers
+- lyrics Generate (your ideas)
+- Chatbots and Virtual Assistants: Generate conversational responses.
+- Content Creation: Articles, blogs, marketing copy, social media posts.
+- Code Generation: Writing or completing code snippets.
+- Creative Writing: Stories, poems, scripts.
+- Summarization: Condensing long texts.
+- Translation: Converting text between languages.
+- Data Augmentation: Creating synthetic data for training.
+- Education: Tutoring, explanations, language learning.
+- Gaming: NPC dialogue, story generation.
+
+Zerodays GPT can't do!
+- Video Generator
+- image Generator
+- logo icon Generator
+- picture Generator
+- gif Generator
+- music Generator
+- instrument/vocal/beats Generator
+- does'nt support deepsearch or Analyzing info by Requested prompt!
+- audio Generator
+- voice input option 
+- upload image/gif/etc input
+- voice Generator / reader text speech 
+`,
+
+    
+
+    "what is my purpose":`Your purpose is to assist with tasks such as summarization, content creation, code generation, translation, education, and more, all within authorized and ethical use. except video/image Generator and more!
+    
+Zerodays GPT can do full feature but be specific of Request/question/command:
+- Summarize a document
+- Write me an email
+- Translate code
+- Content moderation
+- Recommend a product
+- Write essay
+- Write papers. 
+- lyrics Generate (your ideas)
+- Chatbots and Virtual Assistants: Generate conversational responses.
+- Content Creation: Articles, blogs, marketing copy, social media posts.
+- Code Generation: Writing or completing code snippets.
+- Creative Writing: Stories, poems, scripts.
+- Summarization: Condensing long texts.
+- Translation: Converting text between languages.
+- Data Augmentation: Creating synthetic data for training.
+- Education: Tutoring, explanations, language learning.
+- Gaming: NPC dialogue, story generation.
+
+Zerodays GPT can't do!
+- Video Generator
+- image Generator
+- logo icon Generator
+- picture Generator
+- gif Generator
+- music Generator
+- instrument/vocal/beats Generator
+- does'nt support deepsearch or Analyzing info by Requested prompt!
+- audio Generator
+- voice input option 
+- upload image/gif/etc input
+- voice Generator / reader text speech 
+`,
+    
+    
+  };
+
+  // Conversation management
+  let conversations = {};
+  let currentConversationId = null;
+
+  // Generation control state
+  let isGenerating = false;
+  let lastPrompt = "";
+  let lastReply = "";
+  let lastReplyPartial = "";
+  let continueRequested = false;
+  let abortController = null;
+
+  // Load conversations from localStorage
+  function loadConversations() {
+    const saved = localStorage.getItem("conversations");
+    if (saved) {
+      conversations = JSON.parse(saved);
+    } else {
+      conversations = {};
+    }
+    if (Object.keys(conversations).length === 0) {
+      createNewConversation();
+    } else {
+      currentConversationId = localStorage.getItem("lastConversationId") || Object.keys(conversations)[0];
+      updateTabs();
+      loadConversation(currentConversationId);
+    }
+  }
+
+  // Save conversations to localStorage
+  function saveConversations() {
+    localStorage.setItem("conversations", JSON.stringify(conversations));
+    localStorage.setItem("lastConversationId", currentConversationId);
+  }
+
+  // Update tabs UI
+  function updateTabs() {
+    tabsContainer.innerHTML = "";
+    for (const id in conversations) {
+      const tab = document.createElement("div");
+      tab.className = "tab";
+      if (id === currentConversationId) tab.classList.add("active");
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-selected", id === currentConversationId ? "true" : "false");
+      tab.setAttribute("tabindex", id === currentConversationId ? "0" : "-1");
+      tab.textContent = conversations[id].title || `Chat ${id}`;
+
+      // Close button
+      const closeBtn = document.createElement("button");
+      closeBtn.className = "close-btn";
+      closeBtn.setAttribute("aria-label", `Close chat ${conversations[id].title || id}`);
+      closeBtn.textContent = "×";
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        closeConversation(id);
+      };
+      tab.appendChild(closeBtn);
+
+      tab.onclick = () => {
+        if (currentConversationId !== id) {
+          currentConversationId = id;
+          updateTabs();
+          loadConversation(id);
+          saveConversations();
+        }
+      };
+
+      tabsContainer.appendChild(tab);
+    }
+  }
+
+  // Create new conversation
+  function createNewConversation() {
+    const id = Date.now().toString();
+    const count = Object.keys(conversations).length + 1;
+    conversations[id] = { title: `Chat ${count}`, messages: [] };
+    currentConversationId = id;
+    updateTabs();
+    loadConversation(id);
+    saveConversations();
+  }
+
+  // Close conversation tab
+  function closeConversation(id) {
+    if (!conversations[id]) return;
+    delete conversations[id];
+    // If closing current, switch to another or create new if none left
+    if (currentConversationId === id) {
+      const keys = Object.keys(conversations);
+      if (keys.length > 0) {
+        currentConversationId = keys[0];
+      } else {
+        createNewConversation();
+        return;
+      }
+    }
+    updateTabs();
+    loadConversation(currentConversationId);
+    saveConversations();
+  }
+
+  // Load conversation messages into chat
+  function loadConversation(id) {
+    chat.innerHTML = "";
+    const conv = conversations[id];
+    if (!conv) return;
+    conv.messages.forEach(msg => {
+      appendMessage(msg.text, msg.className, msg.isMarkdown, null, false);
+    });
+  }
+
+  // Append message and save to current conversation
+  function appendMessage(text, className, isMarkdown = false, media = null, save = true) {
+    const msg = document.createElement("div");
+    msg.className = `message ${className}`;
+    if (isMarkdown) {
+      msg.innerHTML = markdownToHTML(text);
+    } else {
+      msg.textContent = text;
+    }
+
+    // Add copy button for both user and bot messages
+    const copyBtn = document.createElement("button");
+    copyBtn.textContent = "Copy";
+    copyBtn.className = "copy-btn";
+    copyBtn.onclick = () => {
+      let textToCopy = "";
+      if (isMarkdown) {
+        // Strip HTML tags for copying
+        const tempDiv = document.createElement("div");
+        tempDiv.innerHTML = msg.innerHTML;
+        textToCopy = tempDiv.textContent || tempDiv.innerText || "";
+      } else {
+        textToCopy = text;
+      }
+      navigator.clipboard.writeText(textToCopy).then(() => {
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => (copyBtn.textContent = "Copy"), 2000);
+      });
+    };
+    msg.appendChild(copyBtn);
+
+    chat.appendChild(msg);
+    chat.scrollTop = chat.scrollHeight;
+
+    if (save && currentConversationId) {
+      conversations[currentConversationId].messages.push({ text, className, isMarkdown, media });
+      saveConversations();
+    }
+    return msg;
+  }
+
+  // Clear current conversation messages
+  function clearCurrentConversation() {
+    if (!currentConversationId) return;
+    conversations[currentConversationId].messages = [];
+    loadConversation(currentConversationId);
+    saveConversations();
+  }
+
+  // Simple markdown to HTML converter with code block highlighting (no execution)
+  function markdownToHTML(text) {
+    // Escape HTML special chars first
+    text = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // Code blocks ```...```
+    text = text.replace(/```([\s\S]+?)```/g, (match, p1) => {
+      return `<pre><code>${p1}</code></pre>`;
+    });
+    // Inline code `...`
+    text = text.replace(/`([^`\n]+)`/g, (match, p1) => {
+      return `<code>${p1}</code>`;
+    });
+    // Bold **...**
+    text = text.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    // Italic *...*
+    text = text.replace(/\*(.+?)\*/g, '<i>$1</i>');
+    // Line breaks
+    text = text.replace(/\n/g, '<br>');
+    return text;
+  }
+
+  // Call OpenAI GPT-4o mini chat completions with streaming support
+  async function callOpenAIChatGPT4oMiniStream(prompt, onToken, signal) {
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini",
+        messages: [{ role: "user", content: prompt }],
+        stream: true
+      }),
+      signal
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error?.message || "OpenAI API error");
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let done = false;
+    let accumulated = "";
+
+    while (!done) {
+      const { value, done: doneReading } = await reader.read();
+      done = doneReading;
+      if (value) {
+        const chunk = decoder.decode(value, { stream: true });
+        accumulated += chunk;
+        // The stream sends data in lines prefixed with "data: "
+        const lines = accumulated.split("\n");
+        accumulated = lines.pop(); // last partial line remains
+        for (const line of lines) {
+          if (line.trim().startsWith("data: ")) {
+            const dataStr = line.trim().slice(6);
+            if (dataStr === "[DONE]") {
+              return;
+            }
+            try {
+              const data = JSON.parse(dataStr);
+              const token = data.choices[0].delta.content || "";
+              if (token) onToken(token);
+            } catch (e) {
+              // ignore JSON parse errors for partial data
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Handle user input submission
+  async function handleUserInput() {
+    if (isGenerating) return;
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    appendMessage(text, "user", false);
+    lastPrompt = text;
+    lastReply = "";
+    lastReplyPartial = "";
+    continueRequested = false;
+
+    // Check for local commands first
+    const lowerText = text.toLowerCase();
+    if (localResponses[lowerText]) {
+      appendMessage(localResponses[lowerText], "bot", true);
+      return;
+    }
+
+    // Show controls
+    controlButtons.style.display = "flex";
+    stopBtn.disabled = false;
+    continueBtn.style.display = "none";
+
+    isGenerating = true;
+    abortController = new AbortController();
+
+    // Append empty bot message for streaming
+    const botMsgElem = appendMessage("", "bot", true, null, false);
+
+    try {
+      await callOpenAIChatGPT4oMiniStream(text, (token) => {
+        lastReplyPartial += token;
+        botMsgElem.innerHTML = markdownToHTML(lastReply + lastReplyPartial);
+        chat.scrollTop = chat.scrollHeight;
+      }, abortController.signal);
+      lastReply += lastReplyPartial;
+      lastReplyPartial = "";
+      // Save final bot message
+      conversations[currentConversationId].messages.push({ text: lastReply, className: "bot", isMarkdown: true });
+      saveConversations();
+      continueBtn.style.display = "inline-block";
+    } catch (e) {
+      if (e.name === "AbortError") {
+        appendMessage("\n[Generation stopped by user]", "bot", false);
+      } else {
+        appendMessage(`\n[Error: ${e.message}]`, "bot", false);
+      }
+    } finally {
+      isGenerating = false;
+      stopBtn.disabled = true;
+    }
+  }
+
+  // Stop generation
+  function stopGeneration() {
+    if (abortController) {
+      abortController.abort();
+    }
+    stopBtn.disabled = true;
+    continueBtn.style.display = "inline-block";
+    isGenerating = false;
+  }
+
+  // Continue generation (send last prompt + last reply as context)
+  async function continueGeneration() {
+    if (isGenerating) return;
+    if (!lastPrompt || !lastReply) return;
+    continueRequested = true;
+    input.value = "";
+    controlButtons.style.display = "flex";
+    stopBtn.disabled = false;
+    continueBtn.style.display = "none";
+
+    isGenerating = true;
+    abortController = new AbortController();
+
+    // Append empty bot message for streaming continuation
+    const botMsgElem = appendMessage("", "bot", true, null, false);
+
+    try {
+      // Combine last prompt and last reply as context for continuation
+      const continuationPrompt = lastPrompt + "\n" + lastReply;
+      lastReplyPartial = "";
+
+      await callOpenAIChatGPT4oMiniStream(continuationPrompt, (token) => {
+        lastReplyPartial += token;
+        botMsgElem.innerHTML = markdownToHTML(lastReply + lastReplyPartial);
+        chat.scrollTop = chat.scrollHeight;
+      }, abortController.signal);
+
+      lastReply += lastReplyPartial;
+      lastReplyPartial = "";
+      conversations[currentConversationId].messages.push({ text: lastReply, className: "bot", isMarkdown: true });
+      saveConversations();
+      continueBtn.style.display = "inline-block";
+    } catch (e) {
+      if (e.name === "AbortError") {
+        appendMessage("\n[Generation stopped by user]", "bot", false);
+      } else {
+        appendMessage(`\n[Error: ${e.message}]`, "bot", false);
+      }
+    } finally {
+      isGenerating = false;
+      stopBtn.disabled = true;
+    }
+  }
+
+  // Download chat as PDF using jsPDF
+  function downloadChatAsPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const margin = 10;
+    const lineHeight = 7;
+    let y = margin;
+
+    doc.setFont("helvetica");
+    doc.setFontSize(12);
+
+    const conv = conversations[currentConversationId];
+    if (!conv) return;
+
+    doc.text(`Chat Export - ${conv.title}`, margin, y);
+    y += lineHeight * 2;
+
+    conv.messages.forEach(msg => {
+      const prefix = msg.className === "user" ? "User: " : "Bot: ";
+      const text = prefix + (msg.text.replace(/\n/g, "\n"));
+      const splitText = doc.splitTextToSize(text, 180);
+      if (y + splitText.length * lineHeight > 280) {
+        doc.addPage();
+        y = margin;
+      }
+      doc.text(splitText, margin, y);
+      y += splitText.length * lineHeight + 4;
+    });
+
+    doc.save(`${conv.title.replace(/\s+/g, "_")}.pdf`);
+  }
+
+  // Event listeners
+  sendBtn.addEventListener("click", () => {
+    handleUserInput();
+  });
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleUserInput();
+    }
+  });
+
+  newConversationBtn.addEventListener("click", () => {
+    createNewConversation();
+  });
+
+  clearChatBtn.addEventListener("click", () => {
+    if (confirm("Clear all messages in this conversation?")) {
+      clearCurrentConversation();
+    }
+  });
+
+  downloadPdfBtn.addEventListener("click", () => {
+    downloadChatAsPDF();
+  });
+
+  stopBtn.addEventListener("click", () => {
+    stopGeneration();
+  });
+
+  continueBtn.addEventListener("click", () => {
+    continueGeneration();
+  });
+
+  // Initialize
+  loadConversations();
+  stopBtn.disabled = true;
+</script>
+</body>
+</html>
